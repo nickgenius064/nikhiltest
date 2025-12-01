@@ -1,0 +1,49 @@
+trigger: none
+
+pool:
+  name: default   # must be your self-hosted agent pool that can access local files
+
+variables:
+  IMAGE_SOURCE_WIN: 'C:\Users\banka\Desktop\varanasi poster.jpeg'   # change to your local path on Windows agent
+  ARTIFACT_NAME: 'image-artifact'
+
+stages:
+- stage: BuildAndPublishImage
+  displayName: Stage - Prepare & Publish Image Artifact
+  jobs:
+  - job: PrepareArtifact
+    displayName: Prepare (copy image + create index.html)
+    steps:
+
+    - checkout: none
+
+    # Create artifact staging directory (runs on agent)
+    - powershell: |
+        Write-Host "Artifact staging dir: $(Build.ArtifactStagingDirectory)"
+        New-Item -ItemType Directory -Path "$(Build.ArtifactStagingDirectory)" -Force | Out-Null
+      displayName: 'Ensure artifact staging dir (PowerShell)'
+
+    # Copy from a Windows local path if exists. If you're on Linux agent, skip this step and use the Bash copy below.
+    - powershell: |
+        $winPath = '${{ variables.IMAGE_SOURCE_WIN }}'
+        if (Test-Path $winPath) {
+          Copy-Item -Path $winPath -Destination "$(Build.ArtifactStagingDirectory)\$(Split-Path -Leaf $winPath)" -Force
+          Write-Host "Copied $winPath to artifact staging."
+        } else {
+          Write-Host "Windows path $winPath not found on this agent (that's OK if agent is Linux)."
+        }
+      displayName: 'Copy image from Windows local path (PowerShell)'
+
+    # Show contents for debugging
+    - script: |
+        echo "Contents of artifact staging:"
+        ls -la "$(Build.ArtifactStagingDirectory)"
+      displayName: 'List artifact staging contents'
+
+    # Publish artifact so it appears in Azure DevOps
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: '$(Build.ArtifactStagingDirectory)'
+        artifact: '$(ARTIFACT_NAME)'
+        publishLocation: 'pipeline'
+      displayName: 'Publish pipeline artifact'
