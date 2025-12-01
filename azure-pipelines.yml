@@ -1,7 +1,7 @@
 trigger: none
 
 pool:
-  name: default   # must be your self-hosted agent pool that can access local files
+  name: default
 
 variables:
   IMAGE_SOURCE_WIN: 'C:\Users\banka\Desktop\varanasi poster.jpeg'   # change to your local path on Windows agent
